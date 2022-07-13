@@ -1,0 +1,21 @@
+{
+    "baseURL": "https://exam.hust.edu.vn/group/members.php?group=6815",
+    "inputformat":["mssv","name","email"],
+    "inputformat_comment":"mssv , name , email, grade, stt:string birthday",
+    "reloadURL": true,
+    "outputformat":[
+        {
+            "id":"addselect_searchtext",
+            "fillin":"email",
+            "type":"field",
+            "sleep":1
+        },
+        {
+            "id":"",
+            "fillin":"{ENTER}",
+            "type":"control",
+            "sleep":0
+        }    ],
+    "outputformat_comment":" type = control/field, nhuwng kèm theo nội dung mà chứa phím Ctrl, Alt thì không dùng với id được",
+    "keepaliveaftercompleted":true
+}
