@@ -1,0 +1,28 @@
+{
+    "baseURL": "https://exam.hust.edu.vn/user/index.php?id=135",    
+    "inputformat":["mssv","name","email"],
+    "inputformat_comment":"mssv , name , email, grade, stt:string birthday",
+    "reloadURL": false,
+    "outputformat":[
+                        {
+                            "id":"form_autocomplete_input",
+                            "fillin":"email",
+                            "type":"field",
+                            "sleep":1
+                        },
+                        {
+                            "id":"form_autocomplete_input",
+                            "fillin":"{ENTER}",
+                            "type":"control",
+                            "sleep":0
+                        },
+                        {
+                            "id":"",
+                            "fillin":"^a",
+                            "type":"control",
+                            "sleep":0
+                        }                                         
+                    ],
+    "outputformat_comment":" type = control/field, nhuwng kèm theo nội dung mà chứa phím Ctrl, Alt thì không dùng với id được",
+    "keepaliveaftercompleted":true
+}
