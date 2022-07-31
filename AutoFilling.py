@@ -8,15 +8,15 @@ from math import nan
 import numbers
 import string
 from time import sleep
-from unittest import case
-import webbrowser
+from matplotlib import backend_bases
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-import pandas as pd
 import json
 import selenium.common.exceptions
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver import ActionChains
+import validators
+from datetime import datetime
     
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # create a url variable that is the website link that needs to crawl
@@ -25,9 +25,13 @@ from selenium.webdriver import ActionChains
 
 # Select Webbrowser
 WebBrowserSelector=3
+
+CONFIG_URLINLINE="_inline_"  
+"""URL được nhúng ở dòng đầu tiên trong file dữ liệu, thay vì trong file cấu hình ./config.json"""
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def AddUserToGroup():
+def AddUserToGroup(baseURL, input_list):
     """
     This function takes as an input parameter the name of the stock item, and crawls the data of stock codes and prices. 
     Then put the data into the stock_list array
@@ -39,38 +43,23 @@ def AddUserToGroup():
     this function doesn't return anything
     
     """
-    global input_list
     global driver
-    
-    
-    if WebBrowserSelector == 1:
-        driver = webdriver.Firefox()   # import browser firefox}    
-    elif WebBrowserSelector == 2:   
-        driver = webdriver.Chrome(executable_path=r'./BrowserDrivers/chromedriver.exe')  # import browser firefox}    
-    elif WebBrowserSelector == 3:   
-        driver = webdriver.Edge(executable_path=r'./BrowserDrivers/msedgedriver.exe')   # import browser firefox}    
-
-    driver.get(config["baseURL"])   # access the url
+    global backup_cookies
+    global errorhandler
+      
     # Yêu cầu User phải đăng nhập qua AD từ trước rồi. Như vậy crawler này sẽ pass qua luôn
     # mà không cần username/password nữa. 
     # Login done.
-
-    # Mở link Homepage của couse 
-    # Ví dụ https://exam.hust.edu.vn/course/view.php?id=885
-    #driver.get(BASE_URL + '/course/view.php?id={courseid}'.format(courseid=CourseID))
     
     # Vòng lặp nhảy qua tất cả các trang chứa thông tin user
     line = 0
+    TotalCount = len(input_list)
     for student in input_list:
         line = line + 1
-        print(f'{line}/{len(input_list)}', end='')
-        if hasattr(student,"stt"):
-           print(student.stt, end='')
-        if hasattr(student,"name"):
-           print(student.name, end='')           
-        if hasattr(student,"email"):
-           print(student.email, end='')           
-        print('')           
+        
+        #Hiển thị thông tin ra màn hình
+        print(f'{line}/{TotalCount}', end='')    
+        print(student.toString())           
 
         
         # Tìm tới bảng chứa các PTID, vào trong tbody
@@ -78,8 +67,10 @@ def AddUserToGroup():
             try:
                 # Mở nội dung của group cần bổ sung sinh viên
                 # Ví dụ 'https://exam.hust.edu.vn/group/members.php?group=6810' 
-                if (config['reloadURL']):
-                    driver.get(config["baseURL"])
+                if (config['reloadURL']):   
+                    driver.get(baseURL)
+                    #if (backup_cookies != ""):
+                    #    driver.add_cookie(backup_cookies[0])
                 #search_box = driver.find_elements(By.XPATH, '//*[@id="addselect_clearbutton"]')
                 # Lần lượt điền thông tin vào từng hạng mục
                 for victim in config["outputformat"]:
@@ -131,6 +122,16 @@ def AddUserToGroup():
                         if ControlKey != 0:    
                             handler.key_up(ControlKey);
                             handler.perform() 
+                    elif type.find("validator")>=0: # nội dung phải chứa giá trị phù hợp   
+                        victim_content=handler.get_attribute('innerHTML')
+                        found = (victim_content.find(content) >= 0)
+                        if (type == "validator_not" and found)   \
+                                or (type == "validator_contain" and not found) :
+                            print(f"Validate: fail {content}")
+                            errorhandler.write(f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')} Validate fail : line {line} | data {student.toString()}\n")
+                            errorhandler.flush()
+                            continue                        
+                        
                     print(f"...sleeping in {victim['sleep']}")
                     sleep(victim["sleep"])
                 break;                                    
@@ -140,8 +141,10 @@ def AddUserToGroup():
                 pass
             except Exception as ex:
                 print(ex)                
-                break
-                    
+                break    
+    #backup_cookies = driver.get_cookies()
+    errorhandler.close()
+    pass
     #Kêt thúc vòng lặp đọc tất cả các sinh viên
 
 class Student:
@@ -152,23 +155,68 @@ class Student:
     stt:string
     birthday: string
 
+    def toString(this): 
+        res = "";       
+        if hasattr(this ,"mssv"):
+           res = res + ' ' + this.mssv
+        if hasattr(this,"stt"):
+           res = res + ' ' + this.stt
+        if hasattr(this,"name"):
+           res = res + ' ' + this.name
+        if hasattr(this ,"email"):
+           res = res + ' ' + this.email
+        return res
+    
+    
+
 config = dict()
     
 def ReadConfig():
     global config
     config = json.load(open('config.json', encoding="utf-8"))
     print(config)
-        
-def ReadImportData(): 
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def ReadImportData(startfromline: numbers = 1): 
+    """Đọc thông tin cấu hình từ ./config.json
+    
+    Keyword arguments:
+        startfromline: đọc file dữ liệu từ dòng nào? Mặc định =1, đọc từ dòng đầu tiên.
+    Returns: [,]
+        baseURL: đường link để nhập liệu
+        array[]: danh sách dữ liệu cần nhập
+        lastline: chỉ số dòng cuối cùng đọc dữ liệu. -1 nếu đã đọc hết
+    """
     import csv
+    myURL = ""
     
     # Create stock-list to contain the stock-object
     # Each item contains infomation of 1 stock like code, prices
     stock_list = []
 
-    with open('./diem.txt',  encoding="utf-8") as csvfile:
+    lineOfData = 0
+    with open(config['inputfile'],  encoding="utf-8") as csvfile:
         data = csv.reader(csvfile, delimiter = '\t')
         for row in data:
+            lineOfData = lineOfData + 1
+            #Bỏ dòng trống
+            if (len(row) == 0):
+                continue
+            #Bỏ qua một lượng dòng đầu tiên
+            if (lineOfData < startfromline):
+                continue            
+            #Xử lý dòng tiêu đề trong trường hợp CONFIG_URLINLINE
+            if config["baseURL"] == CONFIG_URLINLINE and validators.url(row[0]):
+                # nếu là lần đầu thi thực hiện, nếu là lần 2 thì kết thúc để quá trình nhập liệu sau bắt đầu
+                if myURL == "":
+                    myURL = row[0]
+                    continue
+                else:
+                    # cần giảm đi 1 dòng để lượt sau đọc lại URL
+                    lineOfData = lineOfData -1 
+                    break;
+            #Phân tích dữ liệu
             record = Student()
             col_index = 0
             column_num = len(row)
@@ -185,20 +233,32 @@ def ReadImportData():
                     record.stt = row[col_index]      
                 if config['inputformat'][col_index]  == "birthday":
                     record.birthday = row[col_index]                          
-            stock_list.append(record)        
-    return stock_list
+            stock_list.append(record)   
+        if data.line_num == lineOfData:
+            lineOfData = -1
+    return [myURL,stock_list,lineOfData]
 
+#------------------------------------------------------------------------------
 # main
-
+#------------------------------------------------------------------------------
 #Đọc thông số cấu hình
 ReadConfig()
 
+errorhandler = open(config["errorfile"], encoding="utf-8", mode="a")
+
+if WebBrowserSelector == 1:
+    driver = webdriver.Firefox()   # import browser firefox}    
+elif WebBrowserSelector == 2:   
+    driver = webdriver.Chrome(executable_path=r'./BrowserDrivers/chromedriver.exe')  # import browser firefox}    
+elif WebBrowserSelector == 3:   
+    driver = webdriver.Edge(executable_path=r'./BrowserDrivers/msedgedriver.exe')   # import browser firefox}    
+
 #Đọc nội dung đầu vào
-input_list = ReadImportData()
-
-
-# call crawl_stock_data function to start crawling data from stock sections
-AddUserToGroup()
+lastline = 0
+while lastline >=0:
+    [myBaseURL, input_list, lastline] = ReadImportData(lastline+1)
+    # call crawl_stock_data function to start crawling data from stock sections
+    AddUserToGroup(myBaseURL, input_list)
 
 print ("Done. ")
 if config['keepaliveaftercompleted']:

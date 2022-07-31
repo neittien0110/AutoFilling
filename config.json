@@ -1,21 +1,33 @@
 {
-    "baseURL": "https://exam.hust.edu.vn/group/members.php?group=6815",
-    "inputformat":["mssv","name","email"],
-    "inputformat_comment":"mssv , name , email, grade, stt:string birthday",
+    "baseURL": "_inline_", 
+    "baseURL_comment": "là URL có dạng https://exam.soict.hust.edu.vn/group/members.php?group=337. Tuy nhiên, nên giá trị là _inline_ thì nội dung sẽ là dòng đầu tiên trong file dữ liệu", 
+    "inputfile":"diem.txt",
+    "inputformat":["mssv"],
+    "inputformat_comment":"mssv , name , email, grade, stt, birthday",
     "reloadURL": true,
+    "reloadURL_comment":"Mở lại baseURL sau khi hoàn thành xong một lần nhập liệu.",
     "outputformat":[
         {
             "id":"addselect_searchtext",
-            "fillin":"email",
+            "fillin":"mssv",
             "type":"field",
             "sleep":1
-        },
-        {
+        }
+        ,{
+            "id":"addselect",
+            "fillin":"No users match",
+            "type":"validator_not",
+            "sleep":0
+        }           
+        ,{
             "id":"",
             "fillin":"{ENTER}",
             "type":"control",
             "sleep":0
-        }    ],
-    "outputformat_comment":" type = control/field, nhuwng kèm theo nội dung mà chứa phím Ctrl, Alt thì không dùng với id được",
-    "keepaliveaftercompleted":true
+        }
+    ],
+    "outputformat_comment":" type = control/field, nhuwng kèm theo nội dung mà chứa phím Ctrl, Alt thì không dùng với id được. type = validator_contain/validator_not thì nội dung trường fillin sẽ chứa/không có đoạn text ở fillin và ghi ra file error.log nếu không thoả mãn",
+    "keepaliveaftercompleted":true,
+    "keepaliveaftercompleted_comment":"giữ cửa sổ browser selenium sau khi xong việc. user có thể kiểm tra thêm, okay rồi gõ exit vào commandline để đóng.",
+    "errorfile":"error.txt"
 }

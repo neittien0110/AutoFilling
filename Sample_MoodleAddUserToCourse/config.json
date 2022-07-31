@@ -1,6 +1,6 @@
 {
-    "baseURL": "https://exam.hust.edu.vn/user/index.php?id=135",    
-    "inputformat":["mssv","name","email"],
+    "baseURL": "https://exam.soict.hust.edu.vn/user/index.php?id=223",    
+    "inputformat":["email"],
     "inputformat_comment":"mssv , name , email, grade, stt:string birthday",
     "reloadURL": false,
     "outputformat":[
